@@ -79,7 +79,7 @@
 					"default": "What is the server administrative password?"
 				},
 				"InfraKeyName": {
-					"default": "What Key pair?"
+					"default": "What server login Key pair?"
 				},
 				"DomainAdminUser": {
 					"default": "What is the user name for the domain administrator account?"
