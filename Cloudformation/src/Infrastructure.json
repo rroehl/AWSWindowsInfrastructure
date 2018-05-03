@@ -1,0 +1,1851 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Metadata": {
+		"AWS::CloudFormation::Interface": {
+			"ParameterGroups": [
+				{
+					"Label": {
+						"default": "Infrastructure VPC Configuration"
+					},
+					"Parameters": [
+						"InfraCidrBlock",
+						"InfraEnvironmentType",
+						"InfraAvailabilityZoneIndex",
+						"NetworkStackName",
+						"InfraSecurityGroup"
+					]
+				},
+				{
+					"Label": {
+						"default": "Infrastructure Other Server Configuration"
+					},
+					"Parameters": [
+						"DomainInstanceType",
+						"DomainInstanceIP",
+						"InfraKeyName"
+					]
+				},
+				{
+					"Label": {
+						"default": "Infrastructure Windows Domain Configuration"
+					},
+					"Parameters": [
+						"DomainAdminUser",
+						"AdminPassword",
+						"DomainDNSName",
+						"DomainNetBiosName"
+					]
+				},
+				{
+					"Label": {
+						"default": "Infrastructure Domain User Account Configurations"
+					},
+					"Parameters": [
+						"InfraServiceAccount",
+						"InfraServiceAccountPassword",
+						"RDPAccount",
+						"RDPAccountPassowrd",
+						"FcnAdminDBAAccount",
+						"FcnAdminDBAPassword"
+					]
+				},
+				{
+					"Label": {
+						"default": "Infrastructure Database Account Configuration"
+					},
+					"Parameters": [
+						"DBAdminAccount",
+						"DBAdminPassword"
+					]
+				}
+			],
+			"ParameterLabels": {
+				"InfraCidrBlock": {
+					"default": "What is the VPC Cidr Block?"
+				},
+				"InfraEnvironmentType": {
+					"default": "What is the Infrastructure platform type?"
+				},
+				"InfraAvailabilityZoneIndex": {
+					"default": "What is platform availability zone letter?"
+				},
+				"InfraSecurityGroup": {
+					"default": "Select SecurityGroup"
+				},
+				"DomainInstanceType": {
+					"default": "What is the Domain Controller node instance type?"
+				},
+				"AdminPassword": {
+					"default": "What is the server administrative password?"
+				},
+				"InfraKeyName": {
+					"default": "What Key pair?"
+				},
+				"DomainAdminUser": {
+					"default": "What is the user name for the domain administrator account?"
+				},
+				"DomainDNSName": {
+					"default": "What is the fully qualified domain name of the root forest domain?"
+				},
+				"DomainNetBiosName": {
+					"default": "What is the Netbios domain name?"
+				},
+				"InfraServiceAccount": {
+					"default": "What is the domain user service account name?"
+				},
+				"InfraServiceAccountPassword": {
+					"default": "What is domain user service account password?"
+				},
+				"RDPAccount": {
+					"default": "What is domain user one account name?"
+				},
+				"RDPAccountPassowrd": {
+					"default": "What is  domain user one account password?"
+				},
+				"FcnAdminDBAAccount": {
+					"default": "What is  domain user two account?"
+				},
+				"FcnAdminDBAPassword": {
+					"default": "What is domain user two account password?"
+				},
+				"DBAdminAccount": {
+					"default": "What is DBAdmin service account name?"
+				},
+				"DBAdminPassword": {
+					"default": "What is DBAdmin account service password?"
+				}
+			}
+		}
+	},
+	"Parameters": {
+		"InfraEnvironmentType": {
+			"Description": "The environment is being setup for Dev, Test, or Prod Platform.",
+			"Type": "String",
+			"AllowedValues": [
+				"Dev",
+				"Test",
+				"Prod"
+			],
+			"Default": "Dev",
+			"ConstraintDescription": "must be either Dev, test, or Prod"
+		},
+		"InfraAvailabilityZoneIndex": {
+			"Description": "The letters represent each Availabilty Zone in a region. There can be three AZ's for the Dev, three for the Test and three for the Production platforms.",
+			"Type": "String",
+			"AllowedValues": [
+				"A",
+				"B",
+				"C"
+			],
+			"Default": "A",
+			"ConstraintDescription": "Must be a letter of the AZ in the specified DRegion"
+		},
+		"InfraCidrBlock": {
+			"Description": "VPC Cidr Block",
+			"Type": "String",
+			"MinLength": "9",
+			"MaxLength": "18",
+			"AllowedPattern": "^([0-9]+\\.){3}[0-9]+\\/[0-9]+$",
+			"AllowedValues": [
+				"10.250.0.0/16"
+			],
+			"Default": "10.250.0.0/16"
+		},
+		"InfraKeyName": {
+			"Description": "Name of Existing EC2 KeyPair",
+			"Type": "AWS::EC2::KeyPair::KeyName",
+			"ConstraintDescription": "must be the name of an existing Ec2 pair"
+		},
+		"DomainInstanceType": {
+			"Description": "Domain Controller node Instance Type.",
+			"Type": "String",
+			"Default": "m4.large",
+			"AllowedValues": [
+				"m4.large"
+			]
+		},
+		"AdminPassword": {
+			"Type": "String",
+			"Description": "This is the server local administrator password."
+		},
+		"DomainAdminUser": {
+			"Description": "User name for the account that will be added as Domain Administrator. This is separate from the default \"Administrator\" account",
+			"Type": "String",
+			"Default": "InfraAdmin"
+		},
+		"DomainDNSName": {
+			"Description": "Fully qualified domain name (FQDN) of the forest root domain",
+			"Type": "String",
+			"Default": "test.com"
+		},
+		"DomainNetBiosName": {
+			"Description": "Netbios name for the domain",
+			"Type": "String",
+			"MaxLength": "15",
+			"Default": "testdomain"
+		},
+		"InfraServiceAccount": {
+			"Description": "This is a domain account is used for services that run on the servers.E.G. InfraServiceAccount",
+			"Type": "String",
+			"Default": "svcsys_Infrahpc"
+		},
+		"InfraServiceAccountPassword": {
+			"Type": "String",
+			"Description": "What is the password of the service account."
+		},
+		"RDPAccount": {
+			"Description": "This is another account thats added to the domain. E.G. RDPAccount",
+			"Type": "String",
+			"Default": "Infra-RDP-User"
+		},
+		"RDPAccountPassowrd": {
+			"Type": "String",
+			"Description": "This is the password of this other account."
+		},
+		"FcnAdminDBAAccount": {
+			"Description": "This is yet another account that is added to the domain.",
+			"Type": "String",
+			"Default": "Admin-DBA-user"
+		},
+		"FcnAdminDBAPassword": {
+			"Type": "String",
+			"Description": "This is the password of the domain DB account. E.G. FcnAdminDBAAccount"
+		},
+		"DBAdminAccount": {
+			"Description": "This is a database account added to the domain.",
+			"Type": "String",
+			"Default": "DBAAdmin"
+		},
+		"DBAdminPassword": {
+			"Type": "String",
+			"Description": " What is the database account password."
+		}
+	},
+	"Mappings": {
+		"RegionDataInstanceMap": {
+			"us-west-2": {
+				"Dev": "ami-3dcbd744",
+				"Test": "ami-3dcbd744",
+				"Prod": "ami-3dcbd744"
+			},
+			"us-east-2": {
+				"Dev": "ami-fccce799",
+				"Test": "ami-fccce799",
+				"Prod": "ami-fccce799"
+			}
+		},
+		"RegionHeadInstanceMap": {
+			"us-west-2": {
+				"Dev": "ami-3dcbd744",
+				"Test": "ami-3dcbd744",
+				"Prod": "ami-3dcbd744"
+			},
+			"us-east-2": {
+				"Dev": "ami-fccce799",
+				"Test": "ami-fccce799",
+				"Prod": "ami-fccce799"
+			}
+		},
+		"RegionInterfaceInstanceMap": {
+			"us-west-2": {
+				"Dev": "ami-3dcbd744",
+				"Test": "ami-3dcbd744",
+				"Prod": "ami-3dcbd744"
+			},
+			"us-east-2": {
+				"Dev": "ami-fccce799",
+				"Test": "ami-fccce799",
+				"Prod": "ami-fccce799"
+			}
+		},
+		"RegionComputeInstanceMap": {
+			"us-west-2": {
+				"Dev": "ami-3dcbd744",
+				"Test": "ami-3dcbd744",
+				"Prod": "ami-3dcbd744"
+			},
+			"us-east-2": {
+				"Dev": "ami-fccce799",
+				"Test": "ami-fccce799",
+				"Prod": "ami-fccce799"
+			}
+		},
+		"RegionDomainControllerInstanceMap": {
+			"us-west-2": {
+				"Dev": "ami-3dcbd744",
+				"Test": "ami-3dcbd744",
+				"Prod": "ami-3dcbd744"
+			},
+			"us-east-2": {
+				"Dev": "ami-fccce799",
+				"Test": "ami-fccce799",
+				"Prod": "ami-fccce799"
+			}
+		},
+		"EnvironmentTypeName": {
+			"PlatformName": {
+				"Dev": "D",
+				"Test": "T",
+				"Prod": "P"
+			}
+		},
+		"InfraAvailabilityZoneNumber": {
+			"AZNumber": {
+				"A": "1",
+				"B": "2",
+				"C": "3"
+			}
+		},
+		"SubnetMap": {
+			"A": {
+				"Dev": "10.250.14.0/23",
+				"Test": "10.250.20.0/23",
+				"Prod": "10.250.26.0/22"
+			},
+			"B": {
+				"Dev": "10.250.16.0/23",
+				"Test": "10.250.22.0/23",
+				"Prod": "10.250.30.0/22"
+			},
+			"C": {
+				"Dev": "10.250.18.0/23",
+				"Test": "10.250.24.0/23",
+				"Prod": "10.250.34.0/22"
+			}
+		},
+		"AZMap": {
+			"us-west-2": {
+				"A": "us-west-2a",
+				"B": "us-west-2b",
+				"C": "us-west-2c"
+			},
+			"us-east-2": {
+				"A": "us-east-2a",
+				"B": "us-east-2b",
+				"C": "us-east-2c"
+			}
+		},
+		"DomainNodePrivateIPMap": {
+			"Dev": {
+				"A": "10.250.14.15",
+				"B": "10.250.16.15",
+				"C": "10.250.18.15"
+			},
+			"Test": {
+				"A": "10.250.20.15",
+				"B": "10.250.22.15",
+				"C": "10.250.24.15"
+			},
+			"Prod": {
+				"A": "10.250.26.15",
+				"B": "10.250.30.15",
+				"C": "10.250.34.15"
+			}
+		}
+	},
+	"Resources": {
+		"InfraVPC": {
+			"Type": "AWS::EC2::VPC",
+			"Properties": {
+				"CidrBlock": {
+					"Ref": "InfraCidrBlock"
+				},
+				"EnableDnsSupport": "true",
+				"EnableDnsHostnames": "true",
+				"InstanceTenancy": "default",
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									"Infra VPC ",
+									{
+										"Ref": "InfraEnvironmentType"
+									},
+									" ",
+									{
+										"Ref": "InfraAvailabilityZoneIndex"
+									}
+								]
+							]
+						}
+					},
+					{
+						"Key": "Environment",
+						"Value": {
+							"Ref": "InfraEnvironmentType"
+						}
+					},
+					{
+						"Key": "Environment Index",
+						"Value": {
+							"Ref": "InfraAvailabilityZoneIndex"
+						}
+					}
+				]
+			}
+		},
+		"InfraInternalRouteTable": {
+			"Type": "AWS::EC2::RouteTable",
+			"DependsOn": "InfraVPC",
+			"Properties": {
+				"VpcId": {
+					"Ref": "InfraVPC"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									"Infra Internal Route Table ",
+									{
+										"Ref": "InfraEnvironmentType"
+									},
+									" ",
+									{
+										"Ref": "InfraAvailabilityZoneIndex"
+									}
+								]
+							]
+						}
+					},
+					{
+						"Key": "Environment",
+						"Value": {
+							"Ref": "InfraEnvironmentType"
+						}
+					},
+					{
+						"Key": "Environment Index",
+						"Value": {
+							"Ref": "InfraAvailabilityZoneIndex"
+						}
+					}
+				]
+			}
+		},
+		"InfraSubNet": {
+			"Type": "AWS::EC2::Subnet",
+			"DependsOn": "InfraVPC",
+			"Properties": {
+				"AvailabilityZone": {
+					"Fn::FindInMap": [
+						"AZMap",
+						{
+							"Ref": "AWS::Region"
+						},
+						{
+							"Ref": "InfraAvailabilityZoneIndex"
+						}
+					]
+				},
+				"CidrBlock": {
+					"Fn::FindInMap": [
+						"SubnetMap",
+						{
+							"Ref": "InfraAvailabilityZoneIndex"
+						},
+						{
+							"Ref": "InfraEnvironmentType"
+						}
+					]
+				},
+				"MapPublicIpOnLaunch": "false",
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									"Infra Subnet ",
+									{
+										"Ref": "InfraEnvironmentType"
+									},
+									" ",
+									{
+										"Ref": "InfraAvailabilityZoneIndex"
+									}
+								]
+							]
+						}
+					},
+					{
+						"Key": "Environment",
+						"Value": {
+							"Ref": "InfraEnvironmentType"
+						}
+					},
+					{
+						"Key": "Environment Index",
+						"Value": {
+							"Ref": "InfraAvailabilityZoneIndex"
+						}
+					}
+				],
+				"VpcId": {
+					"Ref": "InfraVPC"
+				}
+			}
+		},
+		"InfraSubnetInternalRouteTableAssociation": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"DependsOn": [
+				"InfraSubNet",
+				"InfraInternalRouteTable"
+			],
+			"Properties": {
+				"SubnetId": {
+					"Ref": "InfraSubNet"
+				},
+				"RouteTableId": {
+					"Ref": "InfraInternalRouteTable"
+				}
+			}
+		},
+		"InfraInternetGateway": {
+			"Type": "AWS::EC2::InternetGateway",
+			"Properties": {
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": "Infra Internet Gateway"
+					},
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									"Infra Internet Gateway ",
+									{
+										"Ref": "InfraEnvironmentType"
+									},
+									" ",
+									{
+										"Ref": "InfraAvailabilityZoneIndex"
+									}
+								]
+							]
+						}
+					},
+					{
+						"Key": "Environment",
+						"Value": {
+							"Ref": "InfraEnvironmentType"
+						}
+					},
+					{
+						"Key": "Environment Index",
+						"Value": {
+							"Ref": "InfraAvailabilityZoneIndex"
+						}
+					}
+				]
+			}
+		},
+		"InfraInternetGatewayAttachment": {
+			"Type": "AWS::EC2::VPCGatewayAttachment",
+			"DependsOn": [
+				"InfraVPC",
+				"InfraInternetGateway"
+			],
+			"Properties": {
+				"InternetGatewayId": {
+					"Ref": "InfraInternetGateway"
+				},
+				"VpcId": {
+					"Ref": "InfraVPC"
+				}
+			}
+		},
+		"InfraAddIGWToRoute": {
+			"Type": "AWS::EC2::Route",
+			"DependsOn": [
+				"InfraInternetGateway",
+				"InfraInternalRouteTable"
+			],
+			"Properties": {
+				"RouteTableId": {
+					"Ref": "InfraInternalRouteTable"
+				},
+				"DestinationCidrBlock": "0.0.0.0/0",
+				"GatewayId": {
+					"Ref": "InfraInternetGateway"
+				}
+			}
+		},
+		"InfraSecurityGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"DependsOn": "InfraVPC",
+			"Properties": {
+				"VpcId": {
+					"Ref": "InfraVPC"
+				},
+				"GroupDescription": "Security Group for Infra",
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									"Infra Security Group ",
+									{
+										"Ref": "InfraEnvironmentType"
+									},
+									" ",
+									{
+										"Ref": "InfraAvailabilityZoneIndex"
+									}
+								]
+							]
+						}
+					},
+					{
+						"Key": "Environment",
+						"Value": {
+							"Ref": "InfraEnvironmentType"
+						}
+					},
+					{
+						"Key": "Environment Index",
+						"Value": {
+							"Ref": "InfraAvailabilityZoneIndex"
+						}
+					}
+				],
+				"SecurityGroupIngress": [
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "3389",
+						"ToPort": "3389",
+						"CidrIp": "174.214.10.195/32"
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "5985",
+						"ToPort": "5985",
+						"CidrIp": "174.214.10.195/32"
+					}
+				]
+			}
+		},
+		"ManagementSecurityGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"DependsOn": "InfraVPC",
+			"Properties": {
+				"VpcId": {
+					"Ref": "InfraVPC"
+				},
+				"GroupDescription": "Security Group for Infra",
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									"Management Security Group ",
+									{
+										"Ref": "InfraEnvironmentType"
+									},
+									" ",
+									{
+										"Ref": "InfraAvailabilityZoneIndex"
+									}
+								]
+							]
+						}
+					},
+					{
+						"Key": "Environment",
+						"Value": {
+							"Ref": "InfraEnvironmentType"
+						}
+					},
+					{
+						"Key": "Environment Index",
+						"Value": {
+							"Ref": "InfraAvailabilityZoneIndex"
+						}
+					}
+				],
+				"SecurityGroupIngress": [
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "3389",
+						"ToPort": "3389",
+						"CidrIp": "174.214.10.195/32"
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "5985",
+						"ToPort": "5985",
+						"CidrIp": "174.214.10.195/32"
+					}
+				]
+			}
+		},
+		"RDPSecurityGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"DependsOn": "InfraVPC",
+			"Properties": {
+				"VpcId": {
+					"Ref": "InfraVPC"
+				},
+				"GroupDescription": "Security Group for Infra",
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									"RDP Security Group ",
+									{
+										"Ref": "InfraEnvironmentType"
+									},
+									" ",
+									{
+										"Ref": "InfraAvailabilityZoneIndex"
+									}
+								]
+							]
+						}
+					},
+					{
+						"Key": "Environment",
+						"Value": {
+							"Ref": "InfraEnvironmentType"
+						}
+					},
+					{
+						"Key": "Environment Index",
+						"Value": {
+							"Ref": "InfraAvailabilityZoneIndex"
+						}
+					}
+				],
+				"SecurityGroupIngress": [
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "3389",
+						"ToPort": "3389",
+						"CidrIp": "174.214.10.195/32"
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "5985",
+						"ToPort": "5985",
+						"CidrIp": "174.214.10.195/32"
+					}
+				]
+			}
+		},
+		"ADSecurityGroup": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"DependsOn": "InfraVPC",
+			"Properties": {
+				"VpcId": {
+					"Ref": "InfraVPC"
+				},
+				"GroupDescription": "Security Group for domain controllers",
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									"AD Security Group ",
+									{
+										"Ref": "InfraEnvironmentType"
+									},
+									" ",
+									{
+										"Ref": "InfraAvailabilityZoneIndex"
+									}
+								]
+							]
+						}
+					},
+					{
+						"Key": "Environment",
+						"Value": {
+							"Ref": "InfraEnvironmentType"
+						}
+					},
+					{
+						"Key": "Environment Index",
+						"Value": {
+							"Ref": "InfraAvailabilityZoneIndex"
+						}
+					}
+				],
+				"SecurityGroupIngress": [
+					{
+						"IpProtocol": "udp",
+						"FromPort": "445",
+						"ToPort": "445",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "udp",
+						"FromPort": "49152",
+						"ToPort": "65535",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "udp",
+						"FromPort": "464",
+						"ToPort": "464",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "udp",
+						"FromPort": "5355",
+						"ToPort": "5355",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "464",
+						"ToPort": "464",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "5722",
+						"ToPort": "5722",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "49152",
+						"ToPort": "65535",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "udp",
+						"FromPort": "389",
+						"ToPort": "389",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "udp",
+						"FromPort": "53",
+						"ToPort": "53",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "389",
+						"ToPort": "389",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "udp",
+						"FromPort": "123",
+						"ToPort": "123",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "445",
+						"ToPort": "445",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "9389",
+						"ToPort": "9389",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "3268",
+						"ToPort": "3269",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "88",
+						"ToPort": "88",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "udp",
+						"FromPort": "137",
+						"ToPort": "138",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "139",
+						"ToPort": "139",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "135",
+						"ToPort": "135",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "636",
+						"ToPort": "636",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "53",
+						"ToPort": "53",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					}
+				],
+				"SecurityGroupEgress": [
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "0",
+						"ToPort": "65535",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "udp",
+						"FromPort": "0",
+						"ToPort": "65535",
+						"CidrIp": {
+							"Fn::FindInMap": [
+								"SubnetMap",
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								},
+								{
+									"Ref": "InfraEnvironmentType"
+								}
+							]
+						}
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "3389",
+						"ToPort": "3389",
+						"CidrIp": "174.214.10.195/32"
+					}
+				]
+			}
+		},
+		"RootRole": {
+			"Type": "AWS::IAM::Role",
+			"Properties": {
+				"AssumeRolePolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": {
+								"Service": [
+									"ec2.amazonaws.com"
+								]
+							},
+							"Action": [
+								"sts:AssumeRole"
+							]
+						}
+					]
+				},
+				"Path": "/",
+				"Policies": [
+					{
+						"PolicyName": "root",
+						"PolicyDocument": {
+							"Version": "2012-10-17",
+							"Statement": [
+								{
+									"Effect": "Allow",
+									"Action": "*",
+									"Resource": "*"
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+		"ComputeInstanceProfile": {
+			"Type": "AWS::IAM::InstanceProfile",
+			"Properties": {
+				"Path": "/",
+				"Roles": [
+					{
+						"Ref": "RootRole"
+					}
+				]
+			}
+		},
+		"DataNodeInstanceProfile": {
+			"Type": "AWS::IAM::InstanceProfile",
+			"Properties": {
+				"Path": "/",
+				"Roles": [
+					{
+						"Ref": "RootRole"
+					}
+				]
+			}
+		},
+		"HeadNodeInstanceProfile": {
+			"Type": "AWS::IAM::InstanceProfile",
+			"Properties": {
+				"Path": "/",
+				"Roles": [
+					{
+						"Ref": "RootRole"
+					}
+				]
+			}
+		},
+		"InterfaceNodeInstanceProfile": {
+			"Type": "AWS::IAM::InstanceProfile",
+			"Properties": {
+				"Path": "/",
+				"Roles": [
+					{
+						"Ref": "RootRole"
+					}
+				]
+			}
+		},
+		"DomainController": {
+			"Type": "AWS::EC2::Instance",
+			"DependsOn": "InfraSubNet",
+			"Metadata": {
+				"AWS::CloudFormation::Init": {
+					"configSets": {
+						"config": [
+							"setupfiles",
+							"rename",
+							"installADDS",
+							"addAccounts"
+						]
+					},
+					"setupfiles": {
+						"files": {
+							"c:\\cfn\\cfn-hup.conf": {
+								"content": {
+									"Fn::Join": [
+										"",
+										[
+											"[main]\n",
+											"stack=",
+											{
+												"Ref": "AWS::StackName"
+											},
+											"\n",
+											"region=",
+											{
+												"Ref": "AWS::Region"
+											},
+											"\n"
+										]
+									]
+								}
+							},
+							"c:\\cfn\\hooks.d\\cfn-auto-reloader.conf": {
+								"content": {
+									"Fn::Join": [
+										"",
+										[
+											"[cfn-auto-reloader-hook]\n",
+											"triggers=post.update\n",
+											"path=Resources.DomainController.Metadata.AWS::CloudFormation::Init\n",
+											"action=cfn-init.exe -v -c config -s ",
+											{
+												"Ref": "AWS::StackId"
+											},
+											" -r DomainController",
+											" --region ",
+											{
+												"Ref": "AWS::Region"
+											},
+											"\n"
+										]
+									]
+								}
+							},
+							"c:\\cfn\\scripts\\Set-StaticIP.ps1": {
+								"content": {
+									"Fn::Join": [
+										"",
+										[
+											"$netip = Get-NetIPConfiguration;",
+											"$ipconfig = Get-NetIPAddress | ?{$_.IpAddress -eq $netip.IPv4Address.IpAddress};",
+											"Get-NetAdapter | Set-NetIPInterface -DHCP Disabled;",
+											"Get-NetAdapter | New-NetIPAddress -AddressFamily IPv4 -IPAddress $netip.IPv4Address.IpAddress -PrefixLength $ipconfig.PrefixLength -DefaultGateway $netip.IPv4DefaultGateway.NextHop;",
+											"Get-NetAdapter | Set-DnsClientServerAddress -ServerAddresses $netip.DNSServer.ServerAddresses;",
+											"\n"
+										]
+									]
+								}
+							},
+							"c:\\cfn\\scripts\\ConvertTo-EnterpriseAdmin.ps1": {
+								"source": "https://s3.amazonaws.com/quickstart-reference/microsoft/activedirectory/latest/scripts/ConvertTo-EnterpriseAdmin.ps1"
+							}
+						},
+						"services": {
+							"windows": {
+								"cfn-hup": {
+									"enabled": "true",
+									"ensureRunning": "true",
+									"files": [
+										"c:\\cfn\\cfn-hup.conf",
+										"c:\\cfn\\hooks.d\\cfn-auto-reloader.conf"
+									]
+								}
+							}
+						},
+						"commands": {
+							"a-disable-win-fw": {
+								"command": {
+									"Fn::Join": [
+										"",
+										[
+											"powershell.exe -Command \"Get-NetFirewallProfile | Set-NetFirewallProfile -Enabled False"
+										]
+									]
+								},
+								"waitAfterCompletion": "0"
+							}
+						}
+					},
+					"rename": {
+						"commands": {
+							"a-set-static-ip": {
+								"command": {
+									"Fn::Join": [
+										"",
+										[
+											"powershell.exe -ExecutionPolicy RemoteSigned -Command c:\\cfn\\scripts\\Set-StaticIP.ps1"
+										]
+									]
+								},
+								"waitAfterCompletion": "15"
+							},
+							"b-run-powershell-RenameComputer-no-reboot": {
+								"command": {
+									"Fn::Join": [
+										"",
+										[
+											"powershell.exe Rename-Computer -NewName ",
+											{
+												"Fn::Join": [
+													"",
+													[
+														"AW",
+														{
+															"Fn::FindInMap": [
+																"EnvironmentTypeName",
+																"PlatformName",
+																{
+																	"Ref": "InfraEnvironmentType"
+																}
+															]
+														},
+														"W",
+														{
+															"Ref": "InfraAvailabilityZoneIndex"
+														},
+														"DC"
+													]
+												]
+											},
+											" -force -restart"
+										]
+									]
+								},
+								"waitAfterCompletion": "forever"
+							}
+						}
+					},
+					"installADDS": {
+						"commands": {
+							"1-install-prereqs": {
+								"command": {
+									"Fn::Join": [
+										"",
+										[
+											"powershell.exe -Command \"Install-WindowsFeature AD-Domain-Services, rsat-adds -IncludeAllSubFeature"
+										]
+									]
+								},
+								"waitAfterCompletion": "0"
+							},
+							"2-install-adds": {
+								"command": {
+									"Fn::Join": [
+										"",
+										[
+											"powershell.exe -Command Install-ADDSForest -DomainName ",
+											{
+												"Ref": "DomainDNSName"
+											},
+											" -SafeModeAdministratorPassword (ConvertTo-SecureString '",
+											{
+												"Ref": "AdminPassword"
+											},
+											"' -AsPlainText -Force) -DomainMode Win2012R2 -DomainNetbiosName ",
+											{
+												"Ref": "DomainNetBiosName"
+											},
+											" -ForestMode Win2012R2 -Confirm:$false -Force"
+										]
+									]
+								},
+								"waitAfterCompletion": "forever"
+							},
+							"3-restart-service": {
+								"command": {
+									"Fn::Join": [
+										"",
+										[
+											"powershell.exe -Command Restart-Service NetLogon -EA 0"
+										]
+									]
+								},
+								"waitAfterCompletion": "60"
+							},
+							"4-restart-ADWS-service": {
+								"command": {
+									"Fn::Join": [
+										"",
+										[
+											"powershell.exe -Command $s = Get-Service -Name ADWS; while ($s.Status -ne 'Running'){ Start-Service ADWS; Start-Sleep 3 }; Start-Sleep 60\n"
+										]
+									]
+								},
+								"waitAfterCompletion": "0"
+							},
+							"5-create-adminuser": {
+								"command": {
+									"Fn::Join": [
+										"",
+										[
+											"powershell.exe -Command $u = New-ADUser -Name ",
+											{
+												"Ref": "DomainAdminUser"
+											},
+											" -UserPrincipalName ",
+											{
+												"Ref": "DomainAdminUser"
+											},
+											"@",
+											{
+												"Ref": "DomainDNSName"
+											},
+											" -AccountPassword (ConvertTo-SecureString '",
+											{
+												"Ref": "AdminPassword"
+											},
+											"' -AsPlainText -Force) -Enabled $true -PasswordNeverExpires $true -PassThru"
+										]
+									]
+								},
+								"waitAfterCompletion": "0"
+							},
+							"6-update-adminuser": {
+								"command": {
+									"Fn::Join": [
+										"",
+										[
+											"powershell.exe -ExecutionPolicy RemoteSigned -Command c:\\cfn\\scripts\\ConvertTo-EnterpriseAdmin.ps1 -Members ",
+											{
+												"Ref": "DomainAdminUser"
+											}
+										]
+									]
+								},
+								"waitAfterCompletion": "0"
+							}
+						}
+					},
+					"addAccounts": {
+						"commands": {
+							"1-create-DBAdminPassword": {
+								"command": {
+									"Fn::Join": [
+										"",
+										[
+											"powershell.exe -Command $u = New-ADUser -Name ",
+											{
+												"Ref": "DBAdminAccount"
+											},
+											" -UserPrincipalName ",
+											{
+												"Ref": "DBAdminAccount"
+											},
+											"@",
+											{
+												"Ref": "DomainDNSName"
+											},
+											" -AccountPassword (ConvertTo-SecureString '",
+											{
+												"Ref": "DBAdminPassword"
+											},
+											"' -AsPlainText -Force) -Enabled $true -PasswordNeverExpires $true -PassThru"
+										]
+									]
+								},
+								"waitAfterCompletion": "0"
+							},
+							"2-create-FcnAdminDBAAccount": {
+								"command": {
+									"Fn::Join": [
+										"",
+										[
+											"powershell.exe -Command $u = New-ADUser -Name ",
+											{
+												"Ref": "FcnAdminDBAAccount"
+											},
+											" -UserPrincipalName ",
+											{
+												"Ref": "FcnAdminDBAAccount"
+											},
+											"@",
+											{
+												"Ref": "DomainDNSName"
+											},
+											" -AccountPassword (ConvertTo-SecureString '",
+											{
+												"Ref": "FcnAdminDBAPassword"
+											},
+											"' -AsPlainText -Force) -Enabled $true -PasswordNeverExpires $true -PassThru"
+										]
+									]
+								},
+								"waitAfterCompletion": "0"
+							}
+						}
+					}
+				}
+			},
+			"Properties": {
+				"BlockDeviceMappings": [
+					{
+						"DeviceName": "/dev/sda1",
+						"Ebs": {
+							"VolumeSize": "40"
+						}
+					}
+				],
+				"ImageId": {
+					"Fn::FindInMap": [
+						"RegionDomainControllerInstanceMap",
+						{
+							"Ref": "AWS::Region"
+						},
+						{
+							"Ref": "InfraEnvironmentType"
+						}
+					]
+				},
+				"InstanceType": {
+					"Ref": "DomainInstanceType"
+				},
+				"KeyName": {
+					"Ref": "InfraKeyName"
+				},
+				"NetworkInterfaces": [
+					{
+						"AssociatePublicIpAddress": "true",
+						"DeleteOnTermination": "true",
+						"DeviceIndex": "0",
+						"GroupSet": [
+							{
+								"Ref": "InfraSecurityGroup"
+							},
+							{
+								"Ref": "ADSecurityGroup"
+							}
+						],
+						"PrivateIpAddress": {
+							"Fn::FindInMap": [
+								"DomainNodePrivateIPMap",
+								{
+									"Ref": "InfraEnvironmentType"
+								},
+								{
+									"Ref": "InfraAvailabilityZoneIndex"
+								}
+							]
+						},
+						"SubnetId": {
+							"Ref": "InfraSubNet"
+						}
+					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									"AW",
+									{
+										"Fn::FindInMap": [
+											"EnvironmentTypeName",
+											"PlatformName",
+											{
+												"Ref": "InfraEnvironmentType"
+											}
+										]
+									},
+									"W",
+									{
+										"Ref": "InfraAvailabilityZoneIndex"
+									},
+									"InfraDC"
+								]
+							]
+						}
+					},
+					{
+						"Key": "Environment",
+						"Value": {
+							"Ref": "InfraEnvironmentType"
+						}
+					},
+					{
+						"Key": "Environment Index",
+						"Value": {
+							"Ref": "InfraAvailabilityZoneIndex"
+						}
+					}
+				],
+				"UserData": {
+					"Fn::Base64": {
+						"Fn::Join": [
+							"",
+							[
+								"<script>\n",
+								"cfn-init.exe -v -c config -s ",
+								{
+									"Ref": "AWS::StackId"
+								},
+								" -r DomainController",
+								" --region ",
+								{
+									"Ref": "AWS::Region"
+								},
+								"\n",
+								"</script>\n"
+							]
+						]
+					}
+				}
+			}
+		}
+	},
+	"Outputs": {
+		"Region": {
+			"Description": "Infra AWS Region",
+			"Value": {
+				"Ref": "AWS::Region"
+			}
+		},
+		"Platform": {
+			"Description": "RM Dev, test, or Prod Platform",
+			"Value": {
+				"Ref": "InfraEnvironmentType"
+			}
+		},
+		"EnvironmentLetter": {
+			"Description": "Infra environment Letter in Dev, Test, or Prod",
+			"Value": {
+				"Ref": "InfraAvailabilityZoneIndex"
+			}
+		},
+		"AvailabilityZone": {
+			"Description": "Infra Availability Zone",
+			"Value": {
+				"Fn::FindInMap": [
+					"AZMap",
+					{
+						"Ref": "AWS::Region"
+					},
+					{
+						"Ref": "InfraAvailabilityZoneIndex"
+					}
+				]
+			}
+		},
+		"SubnetName": {
+			"Description": "Infra Subnet",
+			"Value": {
+				"Fn::FindInMap": [
+					"SubnetMap",
+					{
+						"Ref": "InfraAvailabilityZoneIndex"
+					},
+					{
+						"Ref": "InfraEnvironmentType"
+					}
+				]
+			}
+		},
+		"SubnetIDOrig": {
+			"Description": "Infra Subnet ID Orig",
+			"Value": {
+				"Ref": "InfraSubNet"
+			},
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-InfraDevSubNetID"
+				}
+			}
+		},
+		"SubnetID": {
+			"Description": "Infra Subnet ID",
+			"Value": {
+				"Ref": "InfraSubNet"
+			},
+			"Export": {
+				"Name": {
+					"Fn::Join": [
+						"",
+						[
+							{
+								"Ref": "InfraEnvironmentType"
+							},
+							"-Infra-AZ",
+							{
+								"Fn::FindInMap": [
+									"InfraAvailabilityZoneNumber",
+									"AZNumber",
+									{
+										"Ref": "InfraAvailabilityZoneIndex"
+									}
+								]
+							},
+							"-Subnet"
+						]
+					]
+				}
+			}
+		},
+		"DomainDNSName": {
+			"Description": "Infra Domain DNS name",
+			"Value": {
+				"Ref": "DomainDNSName"
+			}
+		},
+		"DomainNetBiosName": {
+			"Description": "Infra Domain Netbios domain name",
+			"Value": {
+				"Ref": "DomainNetBiosName"
+			}
+		},
+		"DomainController": {
+			"Description": "Infra Domain Controller Name",
+			"Value": {
+				"Ref": "DomainController"
+			}
+		},
+		"InfraSecurityGroupIDorg": {
+			"Description": "Security Groupd ID",
+			"Value": {
+				"Fn::GetAtt": [
+					"InfraSecurityGroup",
+					"GroupId"
+				]
+			},
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-InfraDevSecurityGroupID"
+				}
+			}
+		},
+		"InfraSecurityGroupID": {
+			"Description": "Security Groupd ID",
+			"Value": {
+				"Fn::GetAtt": [
+					"InfraSecurityGroup",
+					"GroupId"
+				]
+			},
+			"Export": {
+				"Name": {
+					"Fn::Join": [
+						"",
+						[
+							{
+								"Ref": "InfraEnvironmentType"
+							},
+							"-Infra-SG"
+						]
+					]
+				}
+			}
+		},
+		"ManagementSecurityGroupID": {
+			"Description": "Security Groupd ID",
+			"Value": {
+				"Fn::GetAtt": [
+					"ManagementSecurityGroup",
+					"GroupId"
+				]
+			},
+			"Export": {
+				"Name": {
+					"Fn::Join": [
+						"",
+						[
+							{
+								"Ref": "InfraEnvironmentType"
+							},
+							"-Management-SG"
+						]
+					]
+				}
+			}
+		},
+		"RDPSecurityGroupID": {
+			"Description": "Security Groupd ID",
+			"Value": {
+				"Fn::GetAtt": [
+					"RDPSecurityGroup",
+					"GroupId"
+				]
+			},
+			"Export": {
+				"Name": {
+					"Fn::Join": [
+						"",
+						[
+							{
+								"Ref": "InfraEnvironmentType"
+							},
+							"-RDP-SG"
+						]
+					]
+				}
+			}
+		}
+	}
+}
